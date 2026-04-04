@@ -1,0 +1,739 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOGOS Greek Wordle</title>
+<style>
+  :root{
+    --color-background-primary:#ffffff;
+    --color-background-secondary:#f3f3f5;
+    --color-text-primary:#1a1a1b;
+    --color-text-secondary:#6b6b73;
+    --color-border-secondary:#d3d6da;
+    --color-border-tertiary:#dcdfe4;
+  }
+  html,body{margin:0;padding:0;background:var(--color-background-primary);color:var(--color-text-primary)}
+  body{min-height:100vh;font-family:'Clear Sans','Helvetica Neue',Arial,sans-serif}
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  #app{font-family:'Clear Sans','Helvetica Neue',Arial,sans-serif;max-width:500px;margin:0 auto;padding:12px 8px 24px}
+  #header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--color-border-tertiary);padding:10px 0;margin-bottom:8px}
+  #header h1{font-size:1.7rem;font-weight:700;letter-spacing:0.12rem;color:var(--color-text-primary);font-family:'Clear Sans','Helvetica Neue',Arial,sans-serif}
+  .hdr-btns{display:flex;gap:4px}
+  #settings-btn,#help-btn{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--color-text-primary);padding:4px 7px;border-radius:4px}
+  #settings-btn:hover,#help-btn:hover{background:var(--color-background-secondary)}
+  #streak-bar{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:6px;font-size:13px;color:var(--color-text-secondary)}
+  .streak-item{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .streak-val{font-size:1.3rem;font-weight:700;color:var(--color-text-primary)}
+  #msg-bar{min-height:28px;text-align:center;font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;transition:opacity 0.3s}
+  #board{display:flex;flex-direction:column;align-items:center;gap:5px;margin-bottom:12px}
+  .row{display:flex;gap:5px}
+  .tile{width:58px;height:58px;border:2px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:1.7rem;font-family:'Noto Serif',serif;font-weight:700;color:var(--color-text-primary);user-select:none;transition:border-color 0.1s}
+  .tile.filled{border-color:var(--color-text-secondary);animation:pop 0.1s ease}
+  .tile.correct{background:#538d4e;border-color:#538d4e;color:#fff}
+  .tile.present{background:#b59f3b;border-color:#b59f3b;color:#fff}
+  .tile.absent{background:#3a3a3c;border-color:#3a3a3c;color:#fff}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}10%,90%{transform:translateX(-4px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-4px)}}
+  .row.shake{animation:shake 0.5s ease}
+  @keyframes bounce{0%,20%{transform:translateY(0)}40%{transform:translateY(-24px)}60%{transform:translateY(-12px)}80%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+  #keyboard{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px}
+  .kb-row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+  .key{min-width:36px;height:54px;border-radius:4px;border:none;background:var(--color-background-secondary);color:var(--color-text-primary);font-family:'Noto Serif',serif;font-weight:700;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 6px;transition:background 0.2s,color 0.2s;user-select:none}
+  .key:hover{filter:brightness(1.1)}
+  .key.wide{min-width:52px;font-family:'Clear Sans',sans-serif;font-size:0.7rem}
+  .key.correct{background:#538d4e;color:#fff}
+  .key.present{background:#b59f3b;color:#fff}
+  .key.absent{background:#3a3a3c;color:#fff}
+  #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center}
+  #modal{background:var(--color-background-primary);border-radius:8px;padding:20px;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;position:relative}
+  #modal h2{font-size:1rem;font-weight:700;text-align:center;letter-spacing:0.1rem;color:var(--color-text-primary);margin-bottom:16px}
+  #modal .close{position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--color-text-secondary)}
+  .ch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:55vh;overflow-y:auto;margin-bottom:14px}
+  .ch-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;border:1.5px solid var(--color-border-tertiary);cursor:pointer;transition:border-color 0.2s,background 0.2s;font-size:13px;color:var(--color-text-primary)}
+  .ch-item.active{border-color:#538d4e;background:#538d4e22}
+  .ch-item input{accent-color:#538d4e;width:14px;height:14px;cursor:pointer}
+  .len-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+  .len-btn{padding:7px 16px;border-radius:20px;border:1.5px solid var(--color-border-tertiary);background:none;color:var(--color-text-primary);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
+  .len-btn.active{border-color:#538d4e;background:#538d4e;color:#fff}
+  .len-btn:hover:not(.active){background:var(--color-background-secondary)}
+  #modal-start{width:100%;padding:11px;background:#538d4e;color:#fff;border:none;border-radius:6px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Clear Sans',sans-serif}
+  #modal-start:hover{background:#6aaf5e}
+  .ex-tile{width:42px;height:42px;border:2px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-family:'Noto Serif',serif;font-weight:700;color:var(--color-text-primary)}
+  .ex-tile.correct{background:#538d4e;border-color:#538d4e;color:#fff}
+  .ex-tile.present{background:#b59f3b;border-color:#b59f3b;color:#fff}
+  .ex-tile.absent{background:#3a3a3c;border-color:#3a3a3c;color:#fff}
+  #game-over-msg{display:none;text-align:center;padding:10px;background:var(--color-background-secondary);border-radius:8px;margin-bottom:8px}
+  #game-over-msg .word{font-size:1.3rem;font-family:'Noto Serif',serif;font-weight:700;color:var(--color-text-primary)}
+  #game-over-msg .meaning{font-size:13px;color:var(--color-text-secondary);margin-top:3px}
+  #new-game-btn{display:none;width:100%;padding:10px;background:#538d4e;color:#fff;border:none;border-radius:6px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Clear Sans',sans-serif;margin-bottom:8px}
+  #new-game-btn:hover{background:#6aaf5e}
+  .section-label{font-size:11px;font-weight:700;letter-spacing:0.08rem;color:var(--color-text-secondary);margin-bottom:8px;text-align:center}
+</style>
+
+<div id="app">
+  <div id="header">
+    <button id="help-btn" title="How to play">?</button>
+    <h1>LOGOS</h1>
+    <div class="hdr-btns">
+      <button id="settings-btn" title="Settings">&#9881;</button>
+    </div>
+  </div>
+  <div id="streak-bar">
+    <div class="streak-item"><span class="streak-val" id="streak-val">0</span><span>streak</span></div>
+    <div class="streak-item"><span class="streak-val" id="best-val">0</span><span>best</span></div>
+    <div class="streak-item"><span class="streak-val" id="played-val">0</span><span>played</span></div>
+    <div class="streak-item"><span class="streak-val" id="won-val">0%</span><span>win %</span></div>
+  </div>
+  <div id="msg-bar"></div>
+  <div id="board"></div>
+  <div id="game-over-msg">
+    <div class="word" id="go-word"></div>
+    <div class="meaning" id="go-meaning"></div>
+  </div>
+  <button id="new-game-btn">New Game</button>
+  <div id="keyboard"></div>
+</div>
+
+<div id="overlay" style="display:none">
+  <div id="modal">
+    <button class="close" id="modal-close">&times;</button>
+    <h2 id="modal-title">SETTINGS</h2>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const VOCAB_RAW = [
+["ἀγαθός","good",5],["ἄγγελος","messenger",4],["ἀγορά","agora, marketplace",8],["ἀγρός","field",1],["ἄγω","I lead, take",2],["ἄγων","struggle, contest",15],["ἀδελφός","brother",11],["Ἀθηναῖος","Athenian",1],["αἰεί","always",4],["αἴρω","I lift",1],["ἀκούω","I hear",4],["ἄλλος","other, another",4],["ἀλλά","but",1],["ἀνήρ","man, husband",4],["ἄνθρωπος","human being, man",1],["ἀπό","from",4],["ἀρετή","excellence, virtue",15],["ἄριστος","best, very good",9],["ἀρχή","beginning",13],["αὐτός","him, her, it; self",1],["αὐτουργός","farmer",1],["ἀφικνέομαι","I arrive",6],["βαδίζω","I walk, go",1],["βαίνω","I step, walk, go",2],["βάλλω","I throw, pelt",7],["βασιλεύς","king",6],["βλέπω","I look, see",2],["βοάω","I shout",5],["βοηθέω","I help",6],["βούλομαι","I wish, want",6],["βοῦς","ox",2],["γάρ","for",1],["γῆ","land, earth",4],["γίγνομαι","I become, happen",6],["γυνή","woman, wife",4],["δέ","and, but",1],["δεῖ","it is necessary",10],["δεινός","terrible, skilled",6],["δεῖπνον","dinner",3],["δένδρον","tree",2],["δεσπότης","master",2],["δή","indeed, in fact",6],["διά","through",9],["δοῦλος","slave",2],["δυνατός","possible, powerful",3],["ἐγώ","I",2],["ἐθέλω","I wish, am willing",4],["εἰμί","I am",1],["εἰς","into, to",2],["ἐκ","out of",3],["ἐκεῖ","there",6],["ἐν","in, on, among",3],["ἔπειτα","then",2],["ἐπεί","when, since",3],["ἔρχομαι","I come, go",6],["ἐσθίω","I eat",9],["ἑταῖρος","comrade, companion",6],["ἔτι","still",3],["εὑρίσκω","I find",7],["ἔχω","I have, hold",4],["Ζεύς","Zeus",3],["ζητέω","I seek, look for",5],["ἡγέομαι","I lead",6],["ἤδη","already, now",2],["ἥκω","I have come",5],["ἥλιος","sun",1],["ἡμεῖς","we",5],["ἡμέρα","day",6],["θάλαττα","sea",7],["θεός","god",8],["θύρα","door",3],["ἱερόν","temple, sanctuary",8],["ἵππος","horse",2],["ἰσχυρός","strong",3],["καί","and, also, even",1],["καλός","beautiful, fine",1],["καρπός","fruit",2],["κατά","down from; according to",5],["κελεύω","I order, bid",1],["κίνδυνος","danger",6],["κλέπτω","I steal",3],["λαμβάνω","I take, seize",4],["λέγω","I say, speak, tell",1],["λείπω","I leave",4],["λίθος","stone",5],["λόγος","word, story",4],["λύω","I loosen, free",4],["μάχη","battle, fight",7],["μέγας","big, large, great",5],["μέν","on the one hand",1],["μένω","I stay, wait",2],["μετά","with; after",4],["μή","not",4],["μόνος","alone, only",5],["ναύτης","sailor",13],["ναῦς","ship",13],["νεκρός","corpse, dead",7],["νέος","young, new",3],["νόμος","law, custom",9],["νύξ","night",7],["ξένος","foreigner, stranger",5],["οἰκία","house, home",3],["οἶνος","wine",11],["ὀλίγος","few, little",4],["ὅλος","whole, entire",13],["ὁδός","road, way, journey",5],["ὁράω","I see, look at",6],["ὅτι","that, because",5],["οὖν","therefore, so, then",4],["οὐ","not",1],["οὗτος","this, these",3],["παῖς","child, boy, girl",3],["πάρειμι","I am present",5],["παρά","from; at; to",8],["πᾶς","all, every, whole",5],["πατήρ","father",3],["πεδίον","plain",13],["πέμπω","I send",4],["πλοῖον","boat",13],["πόλεμος","war",14],["πόλις","city",7],["πολίτης","citizen",8],["πολλοί","many",3],["πολύς","much, many",1],["πονέω","I work",1],["πόνος","toil, work",1],["πορεύομαι","I go, walk, march",6],["πρός","toward; at, near",1],["πρῶτος","first",5],["πῦρ","fire",7],["ῥᾴδιος","easy",4],["σιγάω","I am silent",9],["σῖτος","food",1],["σκοπέω","I look at, consider",11],["σοφός","skilled, wise, clever",11],["σπεύδω","I hurry",2],["σύ","you",3],["σῴζω","I save",6],["ταχέως","quickly",4],["ταχύς","quick, swift",13],["τε","and",3],["τεκόντες","parents",10],["τέλος","in the end, finally",8],["τιμάω","I honor",5],["τις","someone, something",7],["τότε","then",12],["τρέχω","I run",5],["τύπτω","I strike",5],["ὕδωρ","water",10],["ὑμεῖς","you (pl.)",5],["ὑπό","under, by",5],["φέρω","I carry",1],["φεύγω","I flee, escape",5],["φιλέω","I love",1],["φίλος","dear, friendly; friend",4],["φοβέομαι","I fear, am afraid",6],["χαίρω","I rejoice",1],["χαλεπός","difficult",1],["χειμών","storm, winter",7],["χρόνος","time",1],["ὡς","just as, that, when",6],["ὥστε","so that, that",5]
+];
+
+const DIACRITIC_MAP = {'ά':'α','ἀ':'α','ἁ':'α','ἂ':'α','ἃ':'α','ἄ':'α','ἅ':'α','ἆ':'α','ἇ':'α','ὰ':'α','ᾀ':'α','ᾁ':'α','ᾂ':'α','ᾃ':'α','ᾄ':'α','ᾅ':'α','ᾆ':'α','ᾇ':'α','ᾰ':'α','ᾱ':'α','ᾲ':'α','ᾳ':'α','ᾴ':'α','ᾶ':'α','ᾷ':'α','έ':'ε','ἐ':'ε','ἑ':'ε','ἒ':'ε','ἓ':'ε','ἔ':'ε','ἕ':'ε','ὲ':'ε','ή':'η','ἠ':'η','ἡ':'η','ἢ':'η','ἣ':'η','ἤ':'η','ἥ':'η','ἦ':'η','ἧ':'η','ὴ':'η','ᾐ':'η','ᾑ':'η','ᾒ':'η','ᾓ':'η','ᾔ':'η','ᾕ':'η','ᾖ':'η','ᾗ':'η','ῂ':'η','ῃ':'η','ῄ':'η','ῆ':'η','ῇ':'η','ί':'ι','ἰ':'ι','ἱ':'ι','ἲ':'ι','ἳ':'ι','ἴ':'ι','ἵ':'ι','ἶ':'ι','ἷ':'ι','ὶ':'ι','ῐ':'ι','ῑ':'ι','ῒ':'ι','ΐ':'ι','ῖ':'ι','ῗ':'ι','ό':'ο','ὀ':'ο','ὁ':'ο','ὂ':'ο','ὃ':'ο','ὄ':'ο','ὅ':'ο','ὸ':'ο','ύ':'υ','ὐ':'υ','ὑ':'υ','ὒ':'υ','ὓ':'υ','ὔ':'υ','ὕ':'υ','ὖ':'υ','ὗ':'υ','ὺ':'υ','ῠ':'υ','ῡ':'υ','ῢ':'υ','ΰ':'υ','ῦ':'υ','ῧ':'υ','ώ':'ω','ὠ':'ω','ὡ':'ω','ὢ':'ω','ὣ':'ω','ὤ':'ω','ὥ':'ω','ὦ':'ω','ὧ':'ω','ὼ':'ω','ᾠ':'ω','ᾡ':'ω','ᾢ':'ω','ᾣ':'ω','ᾤ':'ω','ᾥ':'ω','ᾦ':'ω','ᾧ':'ω','ῲ':'ω','ῳ':'ω','ῴ':'ω','ῶ':'ω','ῷ':'ω','ς':'σ','ΐ':'ι','ΰ':'υ','ϊ':'ι','ϋ':'υ','ῥ':'ρ','ῤ':'ρ'};
+
+function normalize(str){
+  return [...str].map(c=>{const lc=c.toLowerCase();return DIACRITIC_MAP[lc]||DIACRITIC_MAP[c]||lc;}).join('').replace(/[^αβγδεζηθικλμνξοπρστυφχψω]/g,'');
+}
+
+
+
+function uniqForms(forms){
+  const seen=new Set();
+  const out=[];
+  forms.forEach(f=>{
+    const raw=(typeof f==='string' ? f : (f&&f.display)||'').trim();
+    const norm=normalize(raw);
+    if(!norm || seen.has(norm)) return;
+    seen.add(norm);
+    out.push({display:raw,norm});
+  });
+  return out;
+}
+
+function makeForms(...items){ return items.flat().filter(Boolean); }
+
+function forms2ndMasc(stem){
+  return [stem+'ος',stem+'ου',stem+'ῳ',stem+'ον',stem+'ε',stem+'οι',stem+'ων',stem+'οις',stem+'ους'];
+}
+function forms2ndNeut(stem){
+  return [stem+'ον',stem+'ου',stem+'ῳ',stem+'ον',stem+'ον',stem+'α',stem+'ων',stem+'οις',stem+'α'];
+}
+function forms1stAlpha(stem){
+  return [stem+'α',stem+'ας',stem+'ᾳ',stem+'αν',stem+'α',stem+'αι',stem+'ων',stem+'αις',stem+'ας'];
+}
+function forms1stEta(stem){
+  return [stem+'η',stem+'ης',stem+'ῃ',stem+'ην',stem+'η',stem+'αι',stem+'ων',stem+'αις',stem+'ας'];
+}
+function forms1stMascEta(stem){
+  return [stem+'ης',stem+'ου',stem+'ῃ',stem+'ην',stem+'α',stem+'αι',stem+'ων',stem+'αις',stem+'ας'];
+}
+function forms1stMascAlpha(stem){
+  return [stem+'ας',stem+'ου',stem+'ᾳ',stem+'αν',stem+'α',stem+'αι',stem+'ων',stem+'αις',stem+'ας'];
+}
+function presentActive(stem){
+  return [
+    stem+'ω', stem+'εις', stem+'ει', stem+'ομεν', stem+'ετε', stem+'ουσι', stem+'ουσιν',
+    stem+'ειν', stem+'ε', stem+'ετω', stem+'ετε', stem+'οντων',
+    stem+'ων', stem+'οντος', stem+'οντι', stem+'οντα',
+    stem+'ουσα', stem+'ουσης', stem+'ουσῃ', stem+'ουσαν',
+    stem+'ον', stem+'οντος', stem+'οντι', stem+'ον',
+    stem+'οντες', stem+'οντων', stem+'ουσι', stem+'οντας',
+    stem+'ουσαι', stem+'ουσων', stem+'ουσαις', stem+'ουσας',
+    stem+'οντα', stem+'οντων', stem+'ουσι', stem+'οντα'
+  ];
+}
+function presentMiddle(stem){
+  return [
+    stem+'ομαι', stem+'ῃ', stem+'εται', stem+'ομεθα', stem+'εσθε', stem+'ονται',
+    stem+'εσθαι', stem+'ου', stem+'εσθω', stem+'εσθε', stem+'εσθων',
+    stem+'ομενος', stem+'ομενου', stem+'ομενῳ', stem+'ομενον',
+    stem+'ομενη', stem+'ομενης', stem+'ομενῃ', stem+'ομενην',
+    stem+'ομενον',
+    stem+'ομενοι', stem+'ομενων', stem+'ομενοις', stem+'ομενους',
+    stem+'ομεναι', stem+'ομενων', stem+'ομεναις', stem+'ομενας',
+    stem+'ομενα', stem+'ομενων', stem+'ομενοις', stem+'ομενα'
+  ];
+}
+function contractAlpha(stem){
+  return [
+    stem+'ω', stem+'ας', stem+'α', stem+'ωμεν', stem+'ατε', stem+'ωσι', stem+'ωσιν',
+    stem+'αν', stem+'α', stem+'ατω', stem+'ατε', stem+'ωντων',
+    stem+'ων', stem+'ωντος', stem+'ωντι', stem+'ωντα',
+    stem+'ωσα', stem+'ωσης', stem+'ωσῃ', stem+'ωσαν',
+    stem+'ων', stem+'ωντος', stem+'ωντι', stem+'ων',
+    stem+'ωντες', stem+'ωντων', stem+'ωσι', stem+'ωντας',
+    stem+'ωσαι', stem+'ωσων', stem+'ωσαις', stem+'ωσας',
+    stem+'ωντα', stem+'ωντων', stem+'ωσι', stem+'ωντα'
+  ];
+}
+function contractEpsilon(stem){
+  return [
+    stem+'ω', stem+'εις', stem+'ει', stem+'ουμεν', stem+'ειτε', stem+'ουσι', stem+'ουσιν',
+    stem+'ειν', stem+'ει', stem+'ειτω', stem+'ειτε', stem+'ουντων',
+    stem+'ων', stem+'ουντος', stem+'ουντι', stem+'ουντα',
+    stem+'ουσα', stem+'ουσης', stem+'ουσῃ', stem+'ουσαν',
+    stem+'ουν', stem+'ουντος', stem+'ουντι', stem+'ουν',
+    stem+'ουντες', stem+'ουντων', stem+'ουσι', stem+'ουντας',
+    stem+'ουσαι', stem+'ουσων', stem+'ουσαις', stem+'ουσας',
+    stem+'ουντα', stem+'ουντων', stem+'ουσι', stem+'ουντα'
+  ];
+}
+function contractOmicron(stem){
+  return [
+    stem+'ω', stem+'οις', stem+'οι', stem+'ουμεν', stem+'ουτε', stem+'ουσι', stem+'ουσιν',
+    stem+'ουν', stem+'ου', stem+'ουτω', stem+'ουτε', stem+'ουντων',
+    stem+'ων', stem+'ουντος', stem+'ουντι', stem+'ουντα',
+    stem+'ουσα', stem+'ουσης', stem+'ουσῃ', stem+'ουσαν',
+    stem+'ουν', stem+'ουντος', stem+'ουντι', stem+'ουν',
+    stem+'ουντες', stem+'ουντων', stem+'ουσι', stem+'ουντας',
+    stem+'ουσαι', stem+'ουσων', stem+'ουσαις', stem+'ουσας',
+    stem+'ουντα', stem+'ουντων', stem+'ουσι', stem+'ουντα'
+  ];
+}
+function adjective123(m,f,n){
+  return makeForms(forms2ndMasc(m), forms1stEta(f), forms2ndNeut(n));
+}
+function adjectiveAlpha(m,f,n){
+  return makeForms(forms2ndMasc(m), forms1stAlpha(f), forms2ndNeut(n));
+}
+function irregular3rd(stem, nom, accSg, nomPl, accPl){
+  return [nom, stem+'ος', stem+'ι', accSg, nom,
+          nomPl, stem+'ων', stem+'σι', stem+'σιν', accPl];
+}
+
+const INDECLINABLE = new Set([
+  'αει','αλλα','απο','γαρ','δε','δει','δη','δια','εις','εκ','εκει','εν','επειτα','επει',
+  'ετι','ηδη','και','κατα','μεν','μετα','μη','οτι','ουν','ου','παρα','προς','ταχεως',
+  'τε','τοτε','υπο','ως','ωστε'
+]);
+
+const ADJECTIVE_OVERRIDES = {
+  'αγαθος': adjective123('αγαθ','αγαθ','αγαθ'),
+  'αριστος': adjective123('αριστ','αριστ','αριστ'),
+  'δεινος': adjective123('δειν','δειν','δειν'),
+  'δυνατος': adjective123('δυνατ','δυνατ','δυνατ'),
+  'ισχυρος': adjective123('ισχυρ','ισχυρ','ισχυρ'),
+  'καλος': adjective123('καλ','καλ','καλ'),
+  'νεκρος': adjective123('νεκρ','νεκρ','νεκρ'),
+  'νεος': adjective123('νε','νε','νε'),
+  'ολιγος': adjective123('ολιγ','ολιγ','ολιγ'),
+  'ραδιος': adjective123('ραδι','ραδι','ραδι'),
+  'σοφος': adjective123('σοφ','σοφ','σοφ'),
+  'χαλεπος': adjective123('χαλεπ','χαλεπ','χαλεπ'),
+  'πρωτος': adjective123('πρωτ','πρωτ','πρωτ'),
+  'ολος': adjective123('ολ','ολ','ολ'),
+  'μονος': adjective123('μον','μον','μον'),
+  'φιλος': adjective123('φιλ','φιλ','φιλ'),
+  'πολλοι': adjective123('πολλ','πολλ','πολλ'),
+  'πολυς': makeForms(
+    ['πολυς','πολλου','πολλῳ','πολυν','πολυ',
+     'πολλοι','πολλων','πολλοις','πολλους'],
+    ['πολλη','πολλης','πολλῃ','πολλην','πολλη',
+     'πολλαι','πολλων','πολλαις','πολλας'],
+    ['πολυ','πολλου','πολλῳ','πολυ','πολυ',
+     'πολλα','πολλων','πολλοις','πολλα']
+  ),
+  'μεγας': makeForms(
+    ['μεγας','μεγαλου','μεγαλῳ','μεγαν','μεγα',
+     'μεγαλοι','μεγαλων','μεγαλοις','μεγαλους'],
+    ['μεγαλη','μεγαλης','μεγαλῃ','μεγαλην','μεγαλη',
+     'μεγαλαι','μεγαλων','μεγαλαις','μεγαλας'],
+    ['μεγα','μεγαλου','μεγαλῳ','μεγα','μεγα',
+     'μεγαλα','μεγαλων','μεγαλοις','μεγαλα']
+  ),
+  'πας': makeForms(
+    ['πας','παντος','παντι','παντα','παν',
+     'παντες','παντων','πασι','πασιν','παντας'],
+    ['πασα','πασης','πασῃ','πασαν','πασα',
+     'πασαι','πασων','πασαις','πασας'],
+    ['παν','παντος','παντι','παν','παν',
+     'παντα','παντων','πασι','πασιν','παντα']
+  ),
+  'ταχυς': makeForms(
+    ['ταχυς','ταχεος','ταχει','ταχυν','ταχυ',
+     'ταχεις','ταχεων','ταχεσι','ταχεσιν','ταχεις'],
+    ['ταχεια','ταχειας','ταχειᾳ','ταχειαν','ταχεια',
+     'ταχειαι','ταχειων','ταχειαις','ταχειας'],
+    ['ταχυ','ταχεος','ταχει','ταχυ','ταχυ',
+     'ταχεα','ταχεων','ταχεσι','ταχεσιν','ταχεα']
+  ),
+  'ουτος': makeForms(
+    ['ουτος','τουτου','τουτῳ','τουτον','ουτε',
+     'ουτοι','τουτων','τουτοις','τουτους'],
+    ['αυτη','ταυτης','ταυτῃ','ταυτην','αυτη',
+     'αυται','τουτων','ταυταις','ταυτας'],
+    ['τουτο','τουτου','τουτῳ','τουτο','τουτο',
+     'ταυτα','τουτων','τουτοις','ταυτα']
+  ),
+  'αυτος': makeForms(
+    ['αυτος','αυτου','αυτῳ','αυτον','αυτε',
+     'αυτοι','αυτων','αυτοις','αυτους'],
+    ['αυτη','αυτης','αυτῃ','αυτην','αυτη',
+     'αυται','αυτων','αυταις','αυτας'],
+    ['αυτο','αυτου','αυτῳ','αυτο','αυτο',
+     'αυτα','αυτων','αυτοις','αυτα']
+  )
+};
+
+const NOMINAL_OVERRIDES = {
+  'ανηρ': ['ανηρ','ανδρος','ανδρι','ανδρα','ανερ','ανδρες','ανδρων','ανδρασι','ανδρασιν','ανδρας'],
+  'βασιλευς': ['βασιλευς','βασιλεως','βασιλει','βασιλεα','βασιλευ',
+               'βασιλεις','βασιλεων','βασιλευσι','βασιλευσιν','βασιλεις'],
+  'βους': ['βους','βοος','βοι','βουν','βους','βοες','βοων','βουσι','βουσιν','βους'],
+  'γη': ['γη','γης','γῃ','γην','γη','γαιαι','γαιων','γαιαις','γαιας'],
+  'γυνη': ['γυνη','γυναικος','γυναικι','γυναικα','γυναι','γυναικες','γυναικων','γυναιξι','γυναιξιν','γυναικας'],
+  'ζευς': ['ζευς','διος','διι','δια','ζευ','ζηνες','ζηνων','ζευσι','ζευσιν','ζηνας'],
+  'ναυτης': forms1stMascEta('ναυτ'),
+  'ναυς': ['ναυς','νεως','νηι','ναυν','ναυ','νηες','νεων','ναυσι','ναυσιν','ναυς'],
+  'νυξ': ['νυξ','νυκτος','νυκτι','νυκτα','νυξ','νυκτες','νυκτων','νυξι','νυξιν','νυκτας'],
+  'παις': ['παις','παιδος','παιδι','παιδα','παι','παιδες','παιδων','παισι','παισιν','παιδας'],
+  'πατηρ': ['πατηρ','πατρος','πατρι','πατερα','πατερ','πατερες','πατερων','πατρασι','πατρασιν','πατερας'],
+  'πολις': ['πολις','πολεως','πολει','πολιν','πολι','πολεις','πολεων','πολεσι','πολεσιν','πολεις'],
+  'πολιτης': forms1stMascEta('πολιτ'),
+  'πυρ': ['πυρ','πυρος','πυρι','πυρ','πυρ','πυρα','πυρων','πυρσι','πυρσιν','πυρα'],
+  'τεκοντες': ['τεκοντες','τεκοντων','τεκουσι','τεκουσιν','τεκοντας'],
+  'υδωρ': ['υδωρ','υδατος','υδατι','υδωρ','υδωρ','υδατα','υδατων','υδασι','υδασιν','υδατα'],
+  'χειμων': irregular3rd('χειμων', 'χειμων', 'χειμωνα', 'χειμωνες', 'χειμωνας'),
+  'αγων': irregular3rd('αγων', 'αγων', 'αγωνα', 'αγωνες', 'αγωνας')
+};
+
+const PRONOUN_OVERRIDES = {
+  'εγω': ['εγω','εμου','μου','εμοι','μοι','εμε','με','ημεις','ημων','ημιν','ημας'],
+  'ημεις': ['ημεις','ημων','ημιν','ημας'],
+  'συ': ['συ','σου','σοι','σε','υμεις','υμων','υμιν','υμας'],
+  'υμεις': ['υμεις','υμων','υμιν','υμας'],
+  'τις': ['τις','τινος','τινι','τινα','τι','τινες','τινων','τισι','τισιν','τινας','τινα']
+};
+
+const VERB_OVERRIDES = {
+  'ειμι': ['ειμι','ει','εστι','εστιν','εσμεν','εστε','εισι','εισιν','ειναι','ισθι',
+           'ων','οντος','οντι','ον','ουσα','ουσης','ουσῃ','ουσαν','ον','οντες','οντων','ουσι','ουσαιν','ουσας'],
+  'παρειμι': ['παρειμι','παρει','παρεστι','παρεστιν','παρεσμεν','παρεστε','παρεισι','παρεισιν','παρειναι'],
+  'ερχομαι': ['ερχομαι','ερχῃ','ερχεται','ερχομεθα','ερχεσθε','ερχονται','ερχεσθαι','ερχου','ερχεσθω',
+              'ερχομενος','ερχομενη','ερχομενον','ερχομενοι','ερχομεναι','ερχομενα'],
+  'γιγνομαι': ['γιγνομαι','γιγνῃ','γιγνεται','γιγνομεθα','γιγνεσθε','γιγνονται','γιγνεσθαι',
+               'γιγνομενος','γιγνομενη','γιγνομενον','γιγνομενοι','γιγνομεναι','γιγνομενα'],
+  'βουλομαι': ['βουλομαι','βουλει','βουλεται','βουλομεθα','βουλεσθε','βουλονται','βουλεσθαι',
+               'βουλομενος','βουλομενη','βουλομενον','βουλομενοι','βουλομεναι','βουλομενα'],
+  'ηγεομαι': ['ηγουμαι','ηγῃ','ηγειται','ηγουμεθα','ηγεισθε','ηγουνται','ηγεισθαι',
+              'ηγουμενος','ηγουμενη','ηγουμενον','ηγουμενοι','ηγουμεναι','ηγουμενα'],
+  'φοβεομαι': ['φοβουμαι','φοβῃ','φοβειται','φοβουμεθα','φοβεισθε','φοβουνται','φοβεισθαι',
+               'φοβουμενος','φοβουμενη','φοβουμενον','φοβουμενοι','φοβουμεναι','φοβουμενα'],
+  'πορευομαι': ['πορευομαι','πορευῃ','πορευεται','πορευομεθα','πορευεσθε','πορευονται','πορευεσθαι',
+                'πορευομενος','πορευομενη','πορευομενον','πορευομενοι','πορευομεναι','πορευομενα'],
+  'αφικνεομαι': ['αφικνουμαι','αφικνῃ','αφικνειται','αφικνουμεθα','αφικνεισθε','αφικνουνται','αφικνεισθαι',
+                 'αφικνουμενος','αφικνουμενη','αφικνουμενον'],
+  'οραω': ['ορω','ορας','ορα','ορωμεν','ορατε','ορωσι','ορωσιν','οραν','ορα',
+           'ορων','ορωσα','ορων','ορωντες','ορωσαι','ορωντα'],
+  'βοαω': ['βοω','βοας','βοα','βοωμεν','βοατε','βοωσι','βοωσιν','βοαν','βοα',
+           'βοων','βοωσα','βοων','βοωντες','βοωσαι','βοωντα'],
+  'τιμαω': contractAlpha('τιμ'),
+  'σιγαω': contractAlpha('σιγ'),
+  'φιλεω': contractEpsilon('φιλ'),
+  'σκοπεω': contractEpsilon('σκοπ'),
+  'ζητεω': contractEpsilon('ζητ'),
+  'πονεω': contractEpsilon('πον'),
+  'βοηθεω': contractEpsilon('βοηθ'),
+  'δεω': contractEpsilon('δε'),
+  'φερε': [], 
+};
+
+function buildRegularVerbForms(n){
+  if(n.endsWith('ομαι')) return presentMiddle(n.slice(0,-4));
+  if(n.endsWith('αω')) return contractAlpha(n.slice(0,-2));
+  if(n.endsWith('εω')) return contractEpsilon(n.slice(0,-2));
+  if(n.endsWith('οω')) return contractOmicron(n.slice(0,-2));
+  if(n.endsWith('μι')) return [n];
+  if(n.endsWith('ω')) return presentActive(n.slice(0,-1));
+  return [n];
+}
+
+function generateForms(base, meaning){
+  const b=(base||'').split(',')[0].trim();
+  const n=normalize(b);
+  const forms=[b];
+
+  if(INDECLINABLE.has(n)) return uniqForms(forms);
+
+  if(PRONOUN_OVERRIDES[n]) return uniqForms(makeForms(forms, PRONOUN_OVERRIDES[n]));
+  if(ADJECTIVE_OVERRIDES[n]) return uniqForms(makeForms(forms, ADJECTIVE_OVERRIDES[n]));
+  if(NOMINAL_OVERRIDES[n]) return uniqForms(makeForms(forms, NOMINAL_OVERRIDES[n]));
+  if(VERB_OVERRIDES[n]) return uniqForms(makeForms(forms, VERB_OVERRIDES[n]));
+
+  const isVerb = /^I\b/.test(meaning.trim());
+  if(isVerb){
+    return uniqForms(makeForms(forms, buildRegularVerbForms(n)));
+  }
+
+  if(n.endsWith('της')) return uniqForms(makeForms(forms, forms1stMascEta(n.slice(0,-3))));
+  if(n.endsWith('ης')) return uniqForms(makeForms(forms, forms1stEta(n.slice(0,-1))));
+  if(n.endsWith('α')) return uniqForms(makeForms(forms, forms1stAlpha(n.slice(0,-1))));
+  if(n.endsWith('η')) return uniqForms(makeForms(forms, forms1stEta(n.slice(0,-1))));
+  if(n.endsWith('ος')) return uniqForms(makeForms(forms, forms2ndMasc(n.slice(0,-2))));
+  if(n.endsWith('ον')) return uniqForms(makeForms(forms, forms2ndNeut(n.slice(0,-2))));
+  if(n.endsWith('ων')) return uniqForms(makeForms(forms, irregular3rd(n.slice(0,-1), n, n.slice(0,-1)+'α', n.slice(0,-1)+'ες', n.slice(0,-1)+'ας')));
+
+  return uniqForms(forms);
+}
+
+
+const EXPANDED_VOCAB = (() => {
+  const out=[];
+  const seen=new Set();
+  VOCAB_RAW.forEach(([g,e,c])=>{
+    const base=g.split(',')[0].trim();
+    generateForms(base,e).forEach(form=>{
+      const key=form.norm+'|'+c;
+      if(seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        greek: form.display,
+        base: form.display,
+        lemma: base,
+        norm: form.norm,
+        meaning: form.display===base ? e : `${e} (form of ${base})`,
+        chapter: c,
+        len: [...form.norm].length
+      });
+    });
+  });
+  return out;
+})();
+
+const CHAPTERS = [...new Set(VOCAB_RAW.map(v=>v[2]))].sort((a,b)=>a-b);
+let enabledChapters = new Set(CHAPTERS.filter(c=>c<=5));
+let selectedLength = 'any';
+
+// Stats
+let stats = {streak:0,best:0,played:0,won:0};
+
+function updateStatsUI(){
+  document.getElementById('streak-val').textContent=stats.streak;
+  document.getElementById('best-val').textContent=stats.best;
+  document.getElementById('played-val').textContent=stats.played;
+  document.getElementById('won-val').textContent=stats.played>0?Math.round(stats.won/stats.played*100)+'%':'0%';
+}
+
+function getPool(){
+  let pool = EXPANDED_VOCAB.filter(w=>enabledChapters.has(w.chapter) && w.len>=3);
+  if(selectedLength!=='any'){
+    const len=parseInt(selectedLength);
+    const filtered=pool.filter(w=>w.len===len);
+    if(filtered.length>=3) return filtered;
+  }
+  const preferred=pool.filter(w=>w.len>=4&&w.len<=7);
+  return preferred.length>=3?preferred:pool;
+}
+
+function getLengthCounts(){
+  const pool = EXPANDED_VOCAB.filter(w=>enabledChapters.has(w.chapter)).map(w=>w.len);
+  const counts={};
+  pool.forEach(l=>{counts[l]=(counts[l]||0)+1;});
+  return counts;
+}
+
+const GREEK_ROWS = [
+  ['α','β','γ','δ','ε','ζ','η','θ','ι','κ'],
+  ['λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ'],
+  ['⌫','φ','χ','ψ','ω','↵']
+];
+
+let target=null, targetNorm=null, targetMeaning=null, wordLen=0;
+let guesses=[], currentGuess=[], gameOver=false, keyStates={};
+
+function pickWord(){
+  const pool=getPool();
+  const entry=pool[Math.floor(Math.random()*pool.length)];
+  target=entry.base;
+  targetMeaning=entry.meaning;
+  targetNorm=entry.norm;
+  wordLen=[...targetNorm].length;
+  console.log(`%cLOGOS 🏛 Answer: ${target} (${targetNorm}) — "${targetMeaning}" — lemma ${entry.lemma} — Ch.${entry.chapter} — ${wordLen} letters`,'color:#538d4e;font-weight:bold;font-size:14px');
+}
+
+function getTileSize(){
+  const max=Math.min(58, Math.floor((window.innerWidth-60)/(wordLen+0.5)));
+  return Math.max(38,Math.min(58,max));
+}
+
+function buildBoard(){
+  const board=document.getElementById('board');
+  board.innerHTML='';
+  guesses=[];
+  const sz=getTileSize();
+  for(let r=0;r<6;r++){
+    const row=document.createElement('div');
+    row.className='row';row.id='row-'+r;
+    for(let c=0;c<wordLen;c++){
+      const tile=document.createElement('div');
+      tile.className='tile';tile.id=`tile-${r}-${c}`;
+      tile.style.width=sz+'px';tile.style.height=sz+'px';
+      tile.style.fontSize=(sz*0.5)+'px';
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+}
+
+function buildKeyboard(){
+  const kb=document.getElementById('keyboard');
+  kb.innerHTML='';
+  GREEK_ROWS.forEach(row=>{
+    const div=document.createElement('div');div.className='kb-row';
+    row.forEach(k=>{
+      const btn=document.createElement('button');
+      btn.className='key'+(k==='⌫'||k==='↵'?' wide':'');
+      btn.textContent=k;btn.dataset.key=k;
+      btn.addEventListener('click',()=>handleKey(k));
+      div.appendChild(btn);
+    });
+    kb.appendChild(div);
+  });
+}
+
+function updateKeyboard(){
+  document.querySelectorAll('.key').forEach(btn=>{
+    const k=btn.dataset.key;
+    if(keyStates[k]) btn.className='key'+(k==='⌫'||k==='↵'?' wide':'')+' '+keyStates[k];
+  });
+}
+
+function showMsg(msg,duration=1800){
+  const bar=document.getElementById('msg-bar');
+  bar.textContent=msg;bar.style.opacity=1;
+  if(duration>0) setTimeout(()=>{bar.style.opacity=0;},duration);
+}
+
+function handleKey(k){
+  if(gameOver) return;
+  if(k==='⌫'){if(currentGuess.length>0) currentGuess.pop();}
+  else if(k==='↵'){submitGuess();return;}
+  else{if(currentGuess.length<wordLen) currentGuess.push(k);}
+  renderCurrent();
+}
+
+function renderCurrent(){
+  const rowIdx=guesses.length;
+  for(let c=0;c<wordLen;c++){
+    const tile=document.getElementById(`tile-${rowIdx}-${c}`);
+    tile.textContent=currentGuess[c]||'';
+    tile.className='tile'+(currentGuess[c]?' filled':'');
+  }
+}
+
+function submitGuess(){
+  if(currentGuess.length<wordLen){showMsg('Not enough letters');shakeRow(guesses.length);return;}
+  const guessStr=currentGuess.join('');
+  const result=scoreGuess(guessStr,targetNorm);
+  revealGuess(guesses.length,guessStr,result,()=>{
+    guesses.push(guessStr);
+    result.forEach((r,i)=>{
+      const k=guessStr[i];
+      const pri={correct:3,present:2,absent:1};
+      if(!keyStates[k]||pri[r]>pri[keyStates[k]]) keyStates[k]=r;
+    });
+    updateKeyboard();
+    currentGuess=[];
+    if(result.every(r=>r==='correct')){
+      gameOver=true;
+      setTimeout(()=>{
+        bounceRow(guesses.length-1);
+        const msgs=['Brilliant!','Magnificent!','Impressive!','Splendid!','Great!','Phew!'];
+        showMsg(msgs[guesses.length-1]||'Correct!',2200);
+        stats.streak++;stats.best=Math.max(stats.best,stats.streak);stats.played++;stats.won++;
+        updateStatsUI();
+        endGame(true);
+      },200);
+    } else if(guesses.length===6){
+      gameOver=true;
+      setTimeout(()=>{
+        stats.streak=0;stats.played++;
+        updateStatsUI();
+        endGame(false);
+      },400);
+    }
+  });
+}
+
+function scoreGuess(guess,answer){
+  const gl=[...guess],al=[...answer];
+  const res=Array(gl.length).fill('absent');
+  const used=Array(al.length).fill(false);
+  for(let i=0;i<gl.length;i++) if(gl[i]===al[i]){res[i]='correct';used[i]=true;}
+  for(let i=0;i<gl.length;i++){
+    if(res[i]==='correct') continue;
+    for(let j=0;j<al.length;j++){
+      if(!used[j]&&gl[i]===al[j]){res[i]='present';used[j]=true;break;}
+    }
+  }
+  return res;
+}
+
+function revealGuess(rowIdx,guess,result,cb){
+  const chars=[...guess];
+  chars.forEach((ch,i)=>{
+    const tile=document.getElementById(`tile-${rowIdx}-${i}`);
+    setTimeout(()=>{
+      tile.style.transition=`transform 0.3s ease`;
+      tile.style.transform='rotateX(-90deg)';
+      setTimeout(()=>{
+        tile.textContent=ch;tile.className=`tile ${result[i]}`;tile.style.transform='rotateX(0deg)';
+      },150);
+    },i*150);
+  });
+  setTimeout(cb,chars.length*150+320);
+}
+
+function shakeRow(rowIdx){
+  const row=document.getElementById('row-'+rowIdx);
+  row.classList.add('shake');setTimeout(()=>row.classList.remove('shake'),500);
+}
+
+function bounceRow(rowIdx){
+  for(let c=0;c<wordLen;c++){
+    const tile=document.getElementById(`tile-${rowIdx}-${c}`);
+    setTimeout(()=>{tile.style.animation='bounce 0.8s ease';setTimeout(()=>tile.style.animation='',800);},c*100);
+  }
+}
+
+function endGame(won){
+  document.getElementById('game-over-msg').style.display='block';
+  document.getElementById('go-word').textContent=target;
+  document.getElementById('go-meaning').textContent=targetMeaning;
+  document.getElementById('new-game-btn').style.display='block';
+  if(!won) showMsg('The answer was: '+target,0);
+}
+
+function newGame(){
+  gameOver=false;currentGuess=[];keyStates={};
+  document.getElementById('game-over-msg').style.display='none';
+  document.getElementById('new-game-btn').style.display='none';
+  document.getElementById('msg-bar').textContent='';
+  pickWord();buildBoard();buildKeyboard();
+}
+
+function showSettings(){
+  const overlay=document.getElementById('overlay');
+  document.getElementById('modal-title').textContent='SETTINGS';
+  const counts=getLengthCounts();
+  const available=[3,4,5,6,7].filter(l=>(counts[l]||0)>=3);
+
+  let html='<div class="section-label">WORD LENGTH</div>';
+  html+='<div class="len-row">';
+  html+=`<button class="len-btn${selectedLength==='any'?' active':''}" onclick="setLen('any')">Any</button>`;
+  available.forEach(l=>{
+    html+=`<button class="len-btn${selectedLength==l?' active':''}" onclick="setLen(${l})">${l} letters <span style="font-size:10px;opacity:0.7">(${counts[l]})</span></button>`;
+  });
+  html+='</div>';
+
+  html+='<div class="section-label" style="margin-top:8px">CHAPTERS</div>';
+  html+='<div class="ch-grid">';
+  CHAPTERS.forEach(c=>{
+    const count=EXPANDED_VOCAB.filter(v=>v.chapter===c).length;
+    html+=`<label class="ch-item${enabledChapters.has(c)?' active':''}" id="ch-lbl-${c}">
+      <input type="checkbox" ${enabledChapters.has(c)?'checked':''} onchange="toggleChapter(${c},this.checked)">
+      Ch.${c} <span style="font-size:10px;color:var(--color-text-secondary)">(${count})</span>
+    </label>`;
+  });
+  html+='</div>';
+  html+='<button id="modal-start" onclick="startFromSettings()">Start New Game</button>';
+  document.getElementById('modal-body').innerHTML=html;
+  overlay.style.display='flex';
+}
+
+function setLen(l){
+  selectedLength=l;
+  document.querySelectorAll('.len-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim().startsWith(l==='any'?'Any':l+''));
+  });
+}
+
+function toggleChapter(c,checked){
+  if(checked) enabledChapters.add(c); else enabledChapters.delete(c);
+  const lbl=document.getElementById('ch-lbl-'+c);
+  if(lbl) lbl.className='ch-item'+(enabledChapters.has(c)?' active':'');
+  if(enabledChapters.size===0){
+    enabledChapters.add(c);
+    const inp=document.querySelector(`#ch-lbl-${c} input`);
+    if(inp) inp.checked=true;
+    if(lbl) lbl.className='ch-item active';
+  }
+  // refresh length buttons since pool changed
+  const counts=getLengthCounts();
+  document.querySelectorAll('.len-btn').forEach(b=>{
+    const t=b.textContent.trim();
+    if(t==='Any') return;
+    const l=parseInt(t);
+    const ok=(counts[l]||0)>=3;
+    b.disabled=!ok;b.style.opacity=ok?1:0.4;
+    if(!ok&&selectedLength==l){selectedLength='any';b.classList.remove('active');document.querySelector('.len-btn').classList.add('active');}
+  });
+}
+
+function startFromSettings(){
+  document.getElementById('overlay').style.display='none';
+  newGame();
+}
+
+function showHelp(){
+  document.getElementById('modal-title').textContent='HOW TO PLAY';
+  document.getElementById('modal-body').innerHTML=`
+    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px">Guess the Greek word in 6 tries. After each guess, colors reveal how close you were.</p>
+    <div style="display:flex;gap:4px;margin:8px 0">
+      <div class="ex-tile correct">κ</div><div class="ex-tile">α</div><div class="ex-tile">λ</div><div class="ex-tile">ο</div><div class="ex-tile">σ</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px"><b>κ</b> is in the correct spot.</p>
+    <div style="display:flex;gap:4px;margin:8px 0">
+      <div class="ex-tile">λ</div><div class="ex-tile present">ε</div><div class="ex-tile">γ</div><div class="ex-tile">ω</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px"><b>ε</b> is in the word but wrong spot.</p>
+    <div style="display:flex;gap:4px;margin:8px 0">
+      <div class="ex-tile">π</div><div class="ex-tile">α</div><div class="ex-tile absent">σ</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px"><b>σ</b> is not in the word at all.</p>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Diacritics are ignored — type bare letters. Inflected noun and verb forms are now included too. Use ⚙ to choose chapters and word length.</p>
+    <br><button id="modal-start" onclick="document.getElementById('overlay').style.display='none'">Got it!</button>
+  `;
+  document.getElementById('overlay').style.display='flex';
+}
+
+document.getElementById('settings-btn').addEventListener('click',showSettings);
+document.getElementById('help-btn').addEventListener('click',showHelp);
+document.getElementById('modal-close').addEventListener('click',()=>document.getElementById('overlay').style.display='none');
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))document.getElementById('overlay').style.display='none';});
+document.getElementById('new-game-btn').addEventListener('click',newGame);
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('overlay').style.display!=='none') return;
+  if(e.key==='Backspace') handleKey('⌫');
+  else if(e.key==='Enter') handleKey('↵');
+});
+
+updateStatsUI();
+newGame();
+</script>
+
+</body>
+</html>
